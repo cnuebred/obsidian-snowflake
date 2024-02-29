@@ -1,5 +1,5 @@
 {
-	"name": "obsidian-gitlab",
+	"name": "obsidian-snowflake",
 	"version": "1.0.0",
 	"description": "This is plugin to work with gitlab REST API",
 	"main": "main.js",

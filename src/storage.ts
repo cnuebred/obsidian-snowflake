@@ -1,4 +1,3 @@
-import { App } from "obsidian"
 import * as path from "path"
 const PLUGIN_NAME = 'obsidian-gitlab'
 
@@ -91,6 +90,32 @@ export class FileMetaData {
       return ''
     }
   }
+    /**
+     *  returns `count` of lines from `start` value.
+     * `start` could be also less then `0`, then `count` will be get by the end of the file
+     * 
+     * @param start 
+     * @param count 
+     * @returns 
+ */
+    async lines(start: number, count?: number) {
+      const file = await this.get()
+      const lines = file.toString().split('\n')
+      const len = lines.length
+      if (start > len) return []
+      if (!count) count = len
+      if (start < 0)
+        start = len + start
+      if (start < 0)
+        start = 0
+      if (start + count >= len)
+        count = len
+      else
+        count = start + count
+      this.current_lines = len
+  
+      return lines.slice(start, count)
+    }
 }
 
 export class Logger extends FileMetaData {
@@ -103,32 +128,6 @@ export class Logger extends FileMetaData {
       await this.set((await this.lines(-start)).join('\n'))
       this.current_lines = start
     }
-  }
-  /**
- *  returns `count` of lines from `start` value.
- * `start` could be also less then `0`, then `count` will be get by the end of the file
- * 
- * @param start 
- * @param count 
- * @returns 
- */
-  async lines(start: number, count?: number) {
-    const file = await this.get()
-    const lines = file.toString().split('\n')
-    const len = lines.length
-    if (start > len) return []
-    if (!count) count = len
-    if (start < 0)
-      start = len + start
-    if (start < 0)
-      start = 0
-    if (start + count >= len)
-      count = len
-    else
-      count = start + count
-    this.current_lines = len
-
-    return lines.slice(start, count)
   }
 
   async log(message: string) {
@@ -156,32 +155,7 @@ export class History extends FileMetaData {
       this.current_lines = start
     }
   }
-  /**
-   *  returns `count` of lines from `start` value.
-   * `start` could be also less then `0`, then `count` will be get by the end of the file
-   * 
-   * @param start 
-   * @param count 
-   * @returns 
-   */
-  async lines(start: number, count?: number) {
-    const file = await this.get()
-    const lines = file.toString().split('\n')
-    const len = lines.length
-    if (start > len) return []
-    if (!count) count = len
-    if (start < 0)
-      start = len + start
-    if (start < 0)
-      start = 0
-    if (start + count >= len)
-      count = len
-    else
-      count = start + count
-    this.current_lines = len
 
-    return lines.slice(start, count)
-  }
   parser(line: string) {
     const [time, action, path, old_path] = line.split(' | ')
     return {

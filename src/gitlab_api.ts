@@ -1,4 +1,4 @@
-import { Notice, arrayBufferToBase64 } from 'obsidian'
+import { App, Notice, arrayBufferToBase64 } from 'obsidian'
 import axios from 'axios'
 import { pocket } from 'main'
 
@@ -45,6 +45,32 @@ export type GitLabSnippetDocOptional = {
   files?: GitLabSnippetFile[]
 }
 
+export type GitlabCommit = {
+  id: string,
+  short_id: string,
+  created_at: Date,
+  parent_ids: string,
+  title: string,
+  message: string,
+  author_name: string,
+  author_email: string,
+  authored_date: Date,
+  committer_name: string,
+  committer_email: string,
+  committed_date: Date,
+  trailers: any,
+  extended_trailers: any,
+  web_url: string,
+  stats: {
+    additions: number,
+    deletions: number,
+    total: number
+  },
+  status: any,
+  project_id: number,
+  last_pipeline: any
+}
+
 const urlslash = (...text: string[]): string => {
   const path = text.join('/')
   const end = path.slice(path.lastIndexOf('/'))
@@ -72,7 +98,9 @@ type ExUrl = ReturnType<typeof exurl>
 
 export class GitLabAPI {
   options: GitLabOptions
-  constructor(options: GitLabOptions) {
+  constructor() {
+  }
+  setoptions(options: GitLabOptions) {
     this.options = options
   }
   id = () => urlslash(this.options.project, this.options.repository)
@@ -91,15 +119,15 @@ export class GitLabAPI {
     const array_buffer = await app.vault.adapter.readBinary(path)
     return arrayBufferToBase64(array_buffer)
   }
-  async save_local_file(remote_path: string, local_path?: string, create_if_not_exist: boolean = false): Promise<void>{
+  async save_local_file(remote_path: string, local_path?: string, create_if_not_exist: boolean = false): Promise<void> {
     if (!local_path) local_path = remote_path
-		const remote_file = await this.read(remote_path)
-		if (!remote_file) {
-			if (create_if_not_exist)
-				this.create(remote_path)
-		}
-		else
-			app.vault.adapter.writeBinary(local_path, base64ToArrayBuffer(remote_file.data.content))
+    const remote_file = await this.read(remote_path)
+    if (!remote_file) {
+      if (create_if_not_exist)
+        this.create(remote_path)
+    }
+    else
+      app.vault.adapter.writeBinary(local_path, base64ToArrayBuffer(remote_file.data.content))
   }
   async get_branches() {
     const url = this.url.branches()
@@ -144,6 +172,27 @@ export class GitLabAPI {
     pocket.set('last_commit_id', last_commit.id)
     pocket.set('last_commit_date', last_commit.committed_date)
   }
+  convertToGitlabCommit(data: any): GitlabCommit {
+    return {
+      ...data,
+      created_at: new Date(data.created_at),
+      authored_date: new Date(data.authored_date),
+      committed_date: new Date(data.committed_date),
+    };
+  }
+  async get_commit(sha: string): Promise<GitlabCommit | null> {
+    const url = this.url.commits()
+      .base('/' + sha)
+    try {
+      const res = await axios.get(url.value, {
+        headers: this.header(),
+      })
+      return this.convertToGitlabCommit(res.data)
+    } catch (e) {
+      new Notice(`Cannot get commit\n${url.value}`)
+    }
+    return null
+  }
   async get_commits() {
     const url = this.url.commits()
       .add('with_stats', 'true')
@@ -177,6 +226,19 @@ export class GitLabAPI {
       new Notice(`Cannot get commits\n${url.value}`)
     }
     return res
+  }
+  async get_meta_data_file(path: string) {
+    const url = this.url.files().base(`/${urlslash(path)}`)
+      .add('ref', this.options.branch)
+
+    try {
+      return await axios.head(url.value, {
+        headers: this.header(),
+      })
+    } catch (e) {
+      new Notice(`Cannot get file header\n${url.value}`)
+    }
+    return null
   }
   async pagination(start_page: number, url: ExUrl, callback: (res: any) => void, per_page: number = 100) {
     const page_url = url.add('per_page', per_page.toString()).add('page', start_page.toString())
@@ -252,12 +314,12 @@ export class GitLabAPI {
     } catch (e) {
       if (create_if_not_exist)
         if (notifications && this.options.notifications)
-            new Notice('Cannot update file\nTrying create file')
-        try {
-          await  this.create(path, commit, notifications, false)
-        } catch {
-          if (this.options.notifications)
-            new Notice('Cannot create file')
+          new Notice('Cannot update file\nTrying create file')
+      try {
+        await this.create(path, commit, notifications, false)
+      } catch {
+        if (this.options.notifications)
+          new Notice('Cannot create file')
       }
 
     }
@@ -303,27 +365,23 @@ export class GitLabAPI {
     const url = exurl(`${this.options.api}/projects/${this.id()}/repository/tree`)
       .add('path', urlslash(path))
       .add('ref', this.options.branch)
+      .add('recursive', 'true')
 
     const tree: string[][] = []
     const pages: any[] = []
     await this.pagination(1, url, (res) => {
       pages.push(...res.data)
     })
-    let nc: Notice | null = null
-    if (this.options.notifications && notifications)
-      nc = new Notice(`Fetching: ""`, 0);
     for (const item of pages) {
+      console.log(item)
       tree.push([item.id, item.path, item.type == 'tree'])
 
-      if (depth == 0)
-        if (this.options.notifications && notifications && nc)
-          nc.setMessage(`Fetching: "${item.path}"`)
-      if ((item.type == 'tree' && depth_limit == -1) || (item.type == 'tree' && depth < depth_limit && depth_limit != -1))
-        tree.push(...(await this.read_repo_tree(item.path, depth + 1, depth_limit, notifications)))
+      if (this.options.notifications && notifications && item.type == 'tree')
+        new Notice(`Fetching: "${item.path}"`)
+      // if ((item.type == 'tree' && depth_limit == -1) || (item.type == 'tree' && depth < depth_limit && depth_limit != -1))
+      //   tree.push(...(await this.read_repo_tree(item.path, depth + 1, depth_limit, notifications)))
 
     }
-    if (this.options.notifications && notifications && nc)
-      nc.hide()
     return tree
   }
   snippet(title: string, description: string = '', visibility: string = 'private') {
@@ -341,7 +399,8 @@ export class GitLabAPISnippet extends GitLabAPI {
   sync: boolean = false
   files: GitLabSnippetFile[] = []
   constructor(gitlab: GitLabAPI) {
-    super(gitlab.options)
+    super()
+    this.setoptions(gitlab.options)
   }
   body(): GitLabSnippetDoc {
     return {
