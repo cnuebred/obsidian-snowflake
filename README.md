@@ -7,7 +7,7 @@ Synchronize your notes by GitLab service with repository REST API. Open it publi
 ## Features
  - [x] Upload your notes to the gitlab repository
  - [x] Downloads notes from gitlab repository
-
+ - [ ] STOP using local storage for commits
 
 ## How to install?
 

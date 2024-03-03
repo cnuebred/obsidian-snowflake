@@ -2,6 +2,8 @@ import esbuild from "esbuild"
 import { copy } from 'esbuild-plugin-copy'
 import process from "process"
 import builtins from "builtin-modules"
+import dotenv from 'dotenv'
+dotenv.config();
 
 const banner =
 	`/*
@@ -13,7 +15,7 @@ if you want to view the source, please visit the github repository of this plugi
 const prod = (process.argv[2] === "production");
 const dev = (process.argv[2] === "dev");
 
-const base_relative_path = '../../../../note/obsidian/linq/.obsidian/plugins/obsidian-gitlab/'
+const base_relative_path = process.env.BASE_BUILD_PATH
 
 const gen_copy = () => {
 	return ['main.js', 'manifest.json', 'data.json', 'styles.css'].map(item => {
