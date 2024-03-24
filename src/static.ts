@@ -18,3 +18,5 @@ export const POCKET_TOKEN_KEY = 'gitlabtoken'
 export const HISTORY_VIEW = 'history'
 
 export const GITLAB_API_URL = 'https://gitlab.com/api/v4'
+
+export const PLUGIN_NAME = 'obsidian-snowflake'

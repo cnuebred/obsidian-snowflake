@@ -1,4 +1,4 @@
-import { SyncSnowflake, pocket } from "main"
+import SyncSnowflake, { pocket } from "main"
 import { App, Notice, PluginSettingTab, Setting } from "obsidian"
 
 export class SnowflakeSettings extends PluginSettingTab {

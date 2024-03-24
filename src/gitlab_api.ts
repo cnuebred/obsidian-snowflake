@@ -1,6 +1,6 @@
-import { App, Notice, arrayBufferToBase64 } from 'obsidian'
+import { App, Notice, TFile, arrayBufferToBase64 } from 'obsidian'
 import axios from 'axios'
-import { pocket } from 'main'
+import { pocket, sync_logs } from 'main'
 
 export type GitLabSnippetFileAction = 'create' | 'update' | 'delete' | 'move'
 export type GitLabOptions = {
@@ -115,7 +115,7 @@ export class GitLabAPI {
     branches: () => exurl(`${this.options.api}/projects/${this.id()}/repository/branches`),
     files: () => exurl(`${this.options.api}/projects/${this.id()}/repository/files`)
   }
-  async get_local_file(path: string): Promise<string> {
+  async get_local_file_content(path: string): Promise<string> {
     const array_buffer = await app.vault.adapter.readBinary(path)
     return arrayBufferToBase64(array_buffer)
   }
@@ -247,9 +247,22 @@ export class GitLabAPI {
     await callback(res)
     await this.pagination(start_page + 1, url, callback, per_page)
   }
+  async blame(path:string){
+    const url = this.url.files()
+    .base(`/${urlslash(path)}/blame`)
+    .add('ref', this.options.branch)
+    .value
+    try {
+      const res = await axios.get(url, {
+        headers: this.header(),
+      })
+      return res.data
+    } catch (e) {
+    }
+  }
   async get_diffs(commit_id: string) {
     const url = this.url.commits()
-      .base(`${commit_id}/diff`)
+      .base(`/${commit_id}/diff`)
       .value
     let res = null
     try {
@@ -260,7 +273,7 @@ export class GitLabAPI {
     return res
   }
   async create(path: string, commit: GitLabCommitOptions = {}, notifications: boolean = true, update_if_exist: boolean = true) {
-    const file_content = await this.get_local_file(path)
+    const file_content = await this.get_local_file_content(path)
 
     const data = {
       branch: commit.branch || this.options.branch,
@@ -278,7 +291,9 @@ export class GitLabAPI {
         data, {
         headers: this.header(),
       })
+      sync_logs.log(`creating file "${path}"`)
     } catch (e) {
+      sync_logs.log(`FAIL: creating file "${path}"`)
       if (update_if_exist)
         if (notifications && this.options.notifications)
           new Notice('Cannot create file\nTrying update file')
@@ -292,8 +307,7 @@ export class GitLabAPI {
     return res
   }
   async modify(path: string, commit: GitLabCommitOptions = {}, notifications: boolean = true, create_if_not_exist: boolean = true) {
-    const file_content = await this.get_local_file(path)
-
+    const file_content = await this.get_local_file_content(path)
     const data = {
       branch: commit.branch || this.options.branch,
       encoding: commit.encoding || 'base64',
@@ -311,7 +325,9 @@ export class GitLabAPI {
         data, {
         headers: this.header(),
       })
+      sync_logs.log(`modifying file "${path}"`)
     } catch (e) {
+      sync_logs.log(`FAIL: modifying file "${path}"`)
       if (create_if_not_exist)
         if (notifications && this.options.notifications)
           new Notice('Cannot update file\nTrying create file')
@@ -341,11 +357,22 @@ export class GitLabAPI {
         data: data,
         headers: this.header()
       })
+      sync_logs.log(`deleting file "${path}"`)
     } catch (e) {
+      sync_logs.log(`FAIL: deleting file "${path}"`)
       if (notifications && this.options.notifications)
         new Notice('Cannot delete file')
     }
     return res
+  }
+  async rename(path: string, old_path: string, commit: GitLabCommitOptions = {}, notifications: boolean = true) {
+    try {
+      await this.create(path, commit, notifications)
+      await this.delete(old_path, commit, notifications)
+      sync_logs.log(`renaming file "${old_path}" -> "${path}"`)
+    } catch {
+      sync_logs.log(`FAIL: renaming file "${old_path}" -> "${path}"`)
+    }
   }
   async read(path: string, branch: string = this.options.branch) {
     const file_url = `${this.options.api}/projects/${this.id()}/repository/files/${urlslash(path)}?ref=${branch}`
@@ -355,7 +382,9 @@ export class GitLabAPI {
         file_url, {
         headers: this.header(),
       })
+      sync_logs.log(`reading file "${path}"`)
     } catch (e) {
+      sync_logs.log(`FAIL: reading file "${path}"`)
       if (this.options.notifications)
         new Notice('Cannot read file')
     }
@@ -373,14 +402,10 @@ export class GitLabAPI {
       pages.push(...res.data)
     })
     for (const item of pages) {
-      console.log(item)
       tree.push([item.id, item.path, item.type == 'tree'])
 
       if (this.options.notifications && notifications && item.type == 'tree')
         new Notice(`Fetching: "${item.path}"`)
-      // if ((item.type == 'tree' && depth_limit == -1) || (item.type == 'tree' && depth < depth_limit && depth_limit != -1))
-      //   tree.push(...(await this.read_repo_tree(item.path, depth + 1, depth_limit, notifications)))
-
     }
     return tree
   }

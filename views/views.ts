@@ -1,6 +1,6 @@
 import { App, WorkspaceLeaf } from "obsidian"
-import { local_logs, sync_logs } from "main"
-import { HISTORY_VIEW } from "static"
+import { local_changes_logs, sync_logs } from "main"
+import { HISTORY_VIEW } from "src/static"
 import { HistoryLeaf } from "./history_view"
 
 
@@ -20,7 +20,7 @@ export const  activate_history_view = async() =>  {
     if (leaf)
       (leaf.view as HistoryLeaf).update()
   })
-  local_logs.set_callback(() => {
+  local_changes_logs.set_callback(() => {
     if (leaf)
       (leaf.view as HistoryLeaf).update()
   })

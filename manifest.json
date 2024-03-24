@@ -1,6 +1,6 @@
 {
-	"id": "gitlab sync",
-	"name": "Gitlab Sync",
+	"id": "obsidian-snowflake",
+	"name": "Snowflake Obsidian Sync",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
 	"description": "Synchronize your notes by GitLab service with repository REST API. Open it public or keep it private only for your collaborators, create groups, edit files in collab and make your 'second brain' safety in git history",

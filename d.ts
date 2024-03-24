@@ -33,3 +33,10 @@ export interface SettingsViewpoint {
 	notif: boolean
 	fetch: boolean
 }
+
+// =========storage=========
+
+export type PocketSettings = {
+  prefix?: string
+}
+export type HistoryFileViewAction = 'CREATE' | 'RENAME' | 'DELETE' | 'MODIFY' | 'LOCAL CHANGES PUSHED' | 'LOCAL CHANGES PULLED'
