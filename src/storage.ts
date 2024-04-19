@@ -183,18 +183,20 @@ export class History extends FileMetaData {
     await this.set('')
     this.current_lines_pointer = 0
   }
-  async check_repeats(_action: string, _path: string) {
+  async logs_include_repeats(_action: string, _path: string) {
     const last_changes = await this.get_lines_by_index(-200)
-    for (const item of last_changes) {
+    // check for push changes and reset - check repeats
+    for (const item of last_changes.reverse()) {
       const { action, path } = this.parser(item)
+      if(action.startsWith('LOCAL CHANGES')) return false
       if (action == 'MODIFY' && _action == action && path == _path)
-        return false
+        return true
     }
-    return true
+    return false
   }
   async add_action(action: HistoryFileViewAction, path: string, old_path?: string) {
     const date = new Date()
-    if (!(await this.check_repeats(action, path))) return
+    if ((await this.logs_include_repeats(action, path))) return
     const fullmessage = `\n[${date.toLocaleString()}]\t${action}\t${path}\t${old_path || 'null'}`
     await this.add(fullmessage)
     if (this.callback)
