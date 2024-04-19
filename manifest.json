@@ -1,11 +1,11 @@
 {
 	"id": "obsidian-snowflake",
 	"name": "Snowflake Obsidian Sync",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"minAppVersion": "0.15.0",
 	"description": "Synchronize your notes by GitLab service with repository REST API. Open it public or keep it private only for your collaborators, create groups, edit files in collab and make your 'second brain' safety in git history",
 	"author": "Jonatan Nyga",
 	"authorUrl": "https://github.com/cnuebred",
-  "fundingUrl": "https://www.buymeacoffee.com/cnuebred",
+	"fundingUrl": "https://www.buymeacoffee.com/cnuebred",
 	"isDesktopOnly": false
 }
