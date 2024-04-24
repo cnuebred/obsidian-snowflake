@@ -160,8 +160,8 @@ export const command__fetch_changes = async () => {
   if (last_commit.id == pocket.get('last_commit_id'))
     return nc.setMessage('Everything is up to date')
   let content_remote_changes = 0
-  res.forEach((commit: any) => {
-    req_queue.append(async () => {
+  req_queue.append(async () => {
+    for (const commit of res) {
       const res = await gitlab.get_diffs(commit.id)
       res?.data.forEach(async (item: any) => {
         content_remote_changes++
@@ -178,7 +178,7 @@ export const command__fetch_changes = async () => {
           }
         })
       })
-    })
+    }
   })
   await gitlab.save_last_commit()
   req_queue.append(() => local_changes_logs.add_action('LOCAL CHANGES PULLED', `${content_remote_changes} changes`))

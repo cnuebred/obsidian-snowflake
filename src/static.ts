@@ -12,6 +12,8 @@ export const DEFAULT_SETTINGS: SettingsViewpoint = {
 	notif: true,
 }
 
+export const INTERVAL_AFTER_CHANGES = 15
+
 export const LOGGER_FILE = 'logger.log'
 export const HISTORY_FILE = 'history.log'
 export const POCKET_TOKEN_KEY = 'gitlabtoken'
